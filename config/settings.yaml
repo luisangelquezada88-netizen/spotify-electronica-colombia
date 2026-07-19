@@ -1,0 +1,28 @@
+project:
+  name: spotify-electronica-colombia
+  market: CO
+  start_year: 2018
+  end_year: 2025
+
+spotify:
+  token_url: https://accounts.spotify.com/api/token
+  search_url: https://api.spotify.com/v1/search
+  search_types:
+    - track
+  query_terms:
+    - electronic
+    - house
+    - techno
+    - edm
+    - dance
+  limit: 20
+  sleep_seconds: 1
+
+mongodb:
+  database: spotify_electronica_colombia
+  raw_collection: raw_search_results
+  curated_collection: curated_tracks
+  runs_collection: ingestion_runs
+
+analysis:
+  min_popularity: 80
