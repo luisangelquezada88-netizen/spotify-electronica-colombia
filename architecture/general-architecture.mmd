@@ -1,0 +1,41 @@
+flowchart LR
+    A[Spotify Web API] --> B[Autenticación Client Credentials]
+    B --> C[Capa de extracción en Python]
+
+    C --> D[Respuestas JSON crudas]
+    D --> E[(Colecciones raw en MongoDB)]
+
+    E --> F[Capa de transformación]
+    F --> G[(Colecciones curated en MongoDB)]
+
+    G --> H[Datasets analíticos]
+    H --> I[Notebooks de análisis exploratorio]
+    H --> J[Dashboard final]
+
+    C --> K[Metadata de ejecución]
+    F --> K
+
+    subgraph Fuente
+        A
+    end
+
+    subgraph Ingesta
+        B
+        C
+        D
+    end
+
+    subgraph Almacenamiento
+        E
+        G
+    end
+
+    subgraph Analítica
+        H
+        I
+        J
+    end
+
+    subgraph Monitoreo
+        K
+    end

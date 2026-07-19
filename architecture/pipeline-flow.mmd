@@ -1,0 +1,44 @@
+flowchart TD
+    A[Iniciar ejecución] --> B[Cargar variables de entorno y configuración]
+    B --> C[Solicitar token con Client Credentials]
+    C --> D[Construir consulta inicial]
+    D --> E[Ejecutar búsqueda en Spotify Web API]
+
+    E --> F{¿Hay resultados?}
+    F -- No --> Z[Registrar corrida sin datos y finalizar]
+    F -- Sí --> G[Leer respuesta JSON]
+
+    G --> H[Guardar respuesta cruda en MongoDB]
+    H --> I[Registrar metadata de corrida]
+
+    I --> J{¿Hay más páginas?}
+    J -- Sí --> K[Actualizar offset y repetir búsqueda]
+    K --> E
+    J -- No --> L[Validar campos críticos]
+
+    L --> M[Eliminar duplicados]
+    M --> N[Normalizar y aplanar estructuras anidadas]
+    N --> O[Generar colecciones curated]
+    O --> P[Construir datasets analíticos]
+    P --> Q[Ejecutar análisis exploratorio]
+    Q --> R[Consumir datos en dashboard]
+    R --> S[Documentar resultados y limitaciones]
+    S --> T[Fin]
+
+    E -.-> U[Control de rate limits]
+    U -.-> V{¿Respuesta 429?}
+    V -- Sí --> W[Esperar Retry-After]
+    W --> E
+    V -- No --> E
+
+    classDef process fill:#e8f1f8,stroke:#5b84b1,color:#111;
+    classDef decision fill:#fff4cc,stroke:#d6a900,color:#111;
+    classDef external fill:#e9f5ec,stroke:#4f8a5b,color:#111;
+    classDef storage fill:#f3e8ff,stroke:#8f63b7,color:#111;
+    classDef end fill:#fce8e6,stroke:#c54b4b,color:#111;
+
+    class A,B,C,D,E,G,I,K,L,M,N,O,P,Q,R,S process;
+    class F,J,V decision;
+    class H external;
+    class Z,T end;
+    class U,W process;
