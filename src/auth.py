@@ -17,7 +17,7 @@ def get_spotify_access_token() -> str:
 
     client_id = config["spotify_client_id"]
     client_secret = config["spotify_client_secret"]
-    token_url = config["spotify_token_url"]
+    token_url = config["settings"]["spotify"]["token_url"]
 
     if not client_id or not client_secret:
         raise SpotifyAuthError(

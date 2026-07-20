@@ -6,4 +6,6 @@ __pycache__/
 data/raw/
 data/processed/
 metadata/logs/
+logs/
+*.log
 .DS_Store

@@ -8,6 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ENV_PATH = BASE_DIR / ".env"
 SETTINGS_PATH = BASE_DIR / "config" / "settings.yaml"
 
+
 load_dotenv(ENV_PATH)
 
 
@@ -21,7 +22,8 @@ def get_env_variable(name: str, default: str | None = None) -> str | None:
 
 
 def get_project_config() -> dict:
-    settings = load_settings()
+    config_data = load_settings()
+    settings = config_data["settings"]
 
     return {
         "spotify_client_id": get_env_variable("SPOTIFY_CLIENT_ID"),
