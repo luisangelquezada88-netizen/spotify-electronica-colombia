@@ -51,19 +51,3 @@ spotify-electronica-colombia/
 ├── architecture/
 └── metadata/
 ```
-
-## Estado del proyecto
-
-Sprint 1 en progreso:
-- entorno local configurado;
-- repositorio inicial creado;
-- estructura base del proyecto definida;
-- documentación inicial en construcción.
-
-## Próximos pasos
-
-- Definir README técnico ampliado.
-- Documentar arquitectura y metodología.
-- Preparar configuración base del proyecto.
-- Diseñar la fase de extracción desde Spotify API.
-- Definir modelo inicial de colecciones en MongoDB.
