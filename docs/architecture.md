@@ -4,7 +4,7 @@
 
 Este proyecto implementa un flujo end-to-end de ingeniería de datos para recolectar, almacenar, transformar y analizar metadatos de música electrónica en Colombia usando la Spotify Web API como fuente principal. La arquitectura está diseñada para priorizar claridad, trazabilidad y reproducibilidad.
 
-El proyecto adopta un enfoque **ELT (Extract, Load, Transform)** en lugar de una implementación ETL clásica. La razón principal es que la Spotify Web API entrega datos en formato JSON semiestructurado, por lo que resulta más natural y defendible almacenar primero las respuestas en una base documental antes de transformarlas para análisis posterior. Spotify además exige autorización para todas las llamadas Web API y ofrece endpoints de catálogo que devuelven metadatos de artistas, álbumes y tracks, lo que encaja bien con una capa de aterrizaje documental. [web:440][web:26]
+El proyecto adopta un enfoque **ELT (Extract, Load, Transform)** en lugar de una implementación ETL clásica. La razón principal es que la Spotify Web API entrega datos en formato JSON semiestructurado, por lo que resulta más natural y defendible almacenar primero las respuestas en una base documental antes de transformarlas para análisis posterior. Spotify además exige autorización para todas las llamadas Web API y ofrece endpoints de catálogo que devuelven metadatos de artistas, álbumes y tracks, lo que encaja bien con una capa de aterrizaje documental.
 
 ## 2. Decisión arquitectónica principal
 
@@ -22,7 +22,7 @@ La arquitectura inicial del proyecto sigue esta secuencia:
 
 Se eligió MongoDB como capa inicial de almacenamiento porque:
 
-- Spotify Web API devuelve respuestas JSON con estructuras anidadas y campos variables según endpoint. [web:440]
+- Spotify Web API devuelve respuestas JSON con estructuras anidadas y campos variables según endpoint.
 - El enfoque ELT permite preservar la respuesta original para trazabilidad y auditoría técnica.
 - Una base documental reduce la fricción inicial respecto a una normalización relacional temprana.
 - El proyecto busca mostrar criterio realista de ingeniería de datos para fuentes semiestructuradas.
@@ -42,7 +42,7 @@ La capa relacional no queda descartada para siempre, pero no forma parte de la f
 
 ### 4.1 Fuente de datos
 
-La fuente principal es la **Spotify Web API**, utilizada mediante autenticación **Client Credentials Flow** para acceder a endpoints de catálogo sin datos de usuario. Este flujo permite autenticación servidor-a-servidor y requiere obtener un access token antes de llamar a la API. [web:26][web:451]
+La fuente principal es la **Spotify Web API**, utilizada mediante autenticación **Client Credentials Flow** para acceder a endpoints de catálogo sin datos de usuario. Este flujo permite autenticación servidor-a-servidor y requiere obtener un access token antes de llamar a la API.
 
 ### 4.2 Capa de extracción
 
@@ -54,7 +54,7 @@ La capa de extracción estará implementada en Python y tendrá estas responsabi
 - controlar rate limiting y reintentos,
 - registrar metadatos de ejecución.
 
-El endpoint inicial más probable para el MVP es `search`, ya que permite buscar elementos del catálogo por palabra clave y recuperar metadatos de tracks, artistas o álbumes. [web:442][web:453]
+El endpoint inicial más probable para el MVP es `search`, ya que permite buscar elementos del catálogo por palabra clave y recuperar metadatos de tracks, artistas o álbumes.
 
 ### 4.3 Capa de aterrizaje raw
 
@@ -167,7 +167,7 @@ Cada corrida de ingesta debe registrar:
 
 Los principales riesgos del diseño son:
 
-- dependencia de límites y cambios de comportamiento de la Spotify API, incluyendo rate limits. [web:13]
+- dependencia de límites y cambios de comportamiento de la Spotify API, incluyendo rate limits.
 - sesgo de muestreo derivado del uso de queries por palabras clave o criterios de selección.
 - duplicados y solapamientos entre consultas.
 - sobrecrecimiento de colecciones raw si no se controlan corridas y deduplicación.

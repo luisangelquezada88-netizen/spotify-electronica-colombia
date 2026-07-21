@@ -2,7 +2,7 @@
 
 ## 1. Descripción general
 
-La fuente principal de datos de este proyecto es la **Spotify Web API**, una API REST que permite recuperar metadatos del catálogo de Spotify, incluyendo información sobre tracks, artistas, álbumes, mercados y otros objetos asociados al ecosistema musical de la plataforma. La API devuelve respuestas en formato JSON y está orientada a integraciones que consumen datos del catálogo o interactúan con funciones de usuario según el tipo de autorización usado. [web:440][web:444]
+La fuente principal de datos de este proyecto es la **Spotify Web API**, una API REST que permite recuperar metadatos del catálogo de Spotify, incluyendo información sobre tracks, artistas, álbumes, mercados y otros objetos asociados al ecosistema musical de la plataforma. La API devuelve respuestas en formato JSON y está orientada a integraciones que consumen datos del catálogo o interactúan con funciones de usuario según el tipo de autorización usado. 
 
 Para este proyecto, la fuente se utilizará únicamente como proveedor de **metadatos de catálogo**, no de comportamiento individual de usuarios.
 
@@ -14,7 +14,7 @@ La Spotify Web API es pertinente para este proyecto porque:
 - permite recuperar información de tracks, artistas y álbumes,
 - expone campos útiles para análisis exploratorio,
 - devuelve datos en JSON, lo que encaja con una arquitectura ELT sobre MongoDB,
-- permite construir un caso aplicado de extracción y modelado de datos desde una API real. [web:440][web:442]
+- permite construir un caso aplicado de extracción y modelado de datos desde una API real. 
 
 ## 3. Tipo de datos disponibles
 
@@ -27,7 +27,7 @@ La API entrega principalmente:
 - popularidad para ciertos objetos,
 - fechas de lanzamiento,
 - relaciones entre tracks, artistas y álbumes,
-- enlaces a recursos relacionados dentro de la propia API. [web:440][web:503]
+- enlaces a recursos relacionados dentro de la propia API.
 
 La estructura exacta depende del endpoint consultado.
 
@@ -40,13 +40,13 @@ Este flujo es adecuado porque:
 - es un mecanismo servidor-a-servidor,
 - no requiere login interactivo del usuario final,
 - sirve para consumir endpoints que no dependen de permisos de usuario,
-- encaja con un proyecto orientado a metadatos públicos de catálogo. [web:26][web:451]
+- encaja con un proyecto orientado a metadatos públicos de catálogo.
 
 Como contrapartida, este flujo **no permite** acceder a información privada o personalizada de usuarios.
 
 ## 5. Requisitos de autenticación
 
-Todas las llamadas a Spotify Web API requieren autorización. [web:440]
+Todas las llamadas a Spotify Web API requieren autorización.
 
 Para obtener acceso se necesita:
 
@@ -63,14 +63,14 @@ usando `grant_type=client_credentials` y un cuerpo `application/x-www-form-urlen
 
 ## 6. Consideraciones del modo de desarrollo
 
-Las aplicaciones nuevas comienzan en **Development Mode**. Spotify documenta que este modo tiene restricciones más fuertes que el modo de cuota extendida y, en 2026, endureció reglas para nuevas integraciones. [web:507][web:499]
+Las aplicaciones nuevas comienzan en **Development Mode**. Spotify documenta que este modo tiene restricciones más fuertes que el modo de cuota extendida y, en 2026, endureció reglas para nuevas integraciones.
 
 Aspectos importantes para este proyecto:
 
 - las apps nuevas comienzan en development mode,
 - development mode tiene menor cuota que extended quota mode,
 - Spotify introdujo restricciones adicionales en 2026 para nuevos Client IDs,
-- el acceso disponible puede depender del estado de la app y del tipo de endpoint. [web:13][web:499][web:498]
+- el acceso disponible puede depender del estado de la app y del tipo de endpoint. 
 
 Por eso, antes de programar extracción masiva, el proyecto debe validar el acceso real de la app creada.
 
@@ -86,7 +86,7 @@ Los recursos se consumen mediante solicitudes HTTP estándar y devuelven respues
 
 ### 8.1 Search
 
-El endpoint `search` permite recuperar información del catálogo a partir de una cadena de búsqueda y tipos de objeto como `track`, `artist` o `album`. Es el candidato principal para el MVP porque facilita construir una primera estrategia de ingesta basada en términos controlados. [web:442]
+El endpoint `search` permite recuperar información del catálogo a partir de una cadena de búsqueda y tipos de objeto como `track`, `artist` o `album`. Es el candidato principal para el MVP porque facilita construir una primera estrategia de ingesta basada en términos controlados.
 
 Uso general:
 - permite búsquedas por palabra clave,
@@ -100,15 +100,15 @@ Estos endpoints permiten recuperar metadatos de tracks a partir de IDs ya conoci
 
 ### 8.3 Get Artist
 
-El endpoint de artista permite obtener metadatos adicionales por artista, incluyendo nombre, URLs y algunos campos asociados al objeto artista. Spotify documenta además que algunos atributos del artista están deprecados, como `genres` y `popularity` en esa referencia, por lo que no conviene depender ciegamente de todos los campos históricos. [web:503]
+El endpoint de artista permite obtener metadatos adicionales por artista, incluyendo nombre, URLs y algunos campos asociados al objeto artista. Spotify documenta además que algunos atributos del artista están deprecados, como `genres` y `popularity` en esa referencia, por lo que no conviene depender ciegamente de todos los campos históricos.
 
 ### 8.4 Get Available Markets
 
-Este endpoint devuelve la lista de mercados donde Spotify está disponible y puede ser útil para validar el uso del código `CO` como parte del contexto geográfico del proyecto. [web:505]
+Este endpoint devuelve la lista de mercados donde Spotify está disponible y puede ser útil para validar el uso del código `CO` como parte del contexto geográfico del proyecto.
 
 ## 9. Paginación
 
-Spotify documenta que algunos endpoints soportan paginación mediante los parámetros `limit` y `offset`. [web:440]
+Spotify documenta que algunos endpoints soportan paginación mediante los parámetros `limit` y `offset`.
 
 Esto implica que el pipeline debe:
 
@@ -121,20 +121,20 @@ La paginación es un aspecto central para la capa de extracción y no debe dejar
 
 ## 10. Rate limits
 
-Spotify aplica límites de uso sobre una ventana rodante de 30 segundos. Cuando una app excede ese límite, la API responde con código `429 Too Many Requests`. [web:13]
+Spotify aplica límites de uso sobre una ventana rodante de 30 segundos. Cuando una app excede ese límite, la API responde con código `429 Too Many Requests`. 
 
 Implicaciones directas para el proyecto:
 
 - no se debe implementar extracción agresiva,
 - deben usarse pausas controladas entre requests,
 - el cliente debe respetar `Retry-After` cuando aparezca,
-- debe existir manejo de reintentos y logging de errores. [web:13]
+- debe existir manejo de reintentos y logging de errores.
 
 El límite varía según el modo de cuota de la aplicación.
 
 ## 11. Códigos de error relevantes
 
-La documentación general de Spotify Web API indica, entre otros, estos códigos relevantes para el proyecto: [web:440]
+La documentación general de Spotify Web API indica, entre otros, estos códigos relevantes para el proyecto: 
 
 - `401 Unauthorized`: token ausente, inválido o rechazado.
 - `403 Forbidden`: acceso denegado para el recurso o contexto.
@@ -173,7 +173,7 @@ Dependiendo del endpoint y del objeto, algunos campos de interés potencial son:
 - `external_urls`
 - `uri`
 
-La disponibilidad exacta de cada campo debe validarse empíricamente en la primera corrida del proyecto. [web:503][web:442]
+La disponibilidad exacta de cada campo debe validarse empíricamente en la primera corrida del proyecto. 
 
 ## 13. Restricciones analíticas de la fuente
 
@@ -196,7 +196,7 @@ Los principales riesgos de usar esta fuente son:
 - dependencia de cambios recientes en la plataforma,
 - posibles campos deprecados o no disponibles,
 - sobreinterpretación de señales como popularity,
-- duplicación de resultados entre consultas. [web:499][web:498][web:503]
+- duplicación de resultados entre consultas.
 
 ## 15. Implicaciones para el diseño del pipeline
 
@@ -226,8 +226,8 @@ La prioridad del MVP es la claridad y la reproducibilidad, no la cobertura masiv
 
 ## 17. Cumplimiento y uso responsable
 
-El proyecto debe respetar las políticas, límites y condiciones de uso vigentes de Spotify for Developers. Esto incluye evitar patrones de extracción agresivos, documentar limitaciones del entorno de desarrollo y no presentar el proyecto como una réplica oficial de métricas de consumo o ranking de Spotify. [web:13][web:499]
+El proyecto debe respetar las políticas, límites y condiciones de uso vigentes de Spotify for Developers. Esto incluye evitar patrones de extracción agresivos, documentar limitaciones del entorno de desarrollo y no presentar el proyecto como una réplica oficial de métricas de consumo o ranking de Spotify. 
 
 ## 18. Resumen de la fuente
 
-La Spotify Web API es una fuente adecuada para este proyecto porque ofrece metadatos estructurados del catálogo musical en formato JSON y permite construir un caso realista de ingeniería de datos sobre una fuente semiestructurada. Su uso, sin embargo, exige atención especial a autenticación, paginación, restricciones de cuota, cambios recientes en development mode y limitaciones analíticas de los campos disponibles. [web:440][web:13][web:499]
+La Spotify Web API es una fuente adecuada para este proyecto porque ofrece metadatos estructurados del catálogo musical en formato JSON y permite construir un caso realista de ingeniería de datos sobre una fuente semiestructurada. Su uso, sin embargo, exige atención especial a autenticación, paginación, restricciones de cuota, cambios recientes en development mode y limitaciones analíticas de los campos disponibles. 

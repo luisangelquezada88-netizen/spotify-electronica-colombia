@@ -100,7 +100,7 @@ Dependiendo del enriquecimiento posterior, también se podrán derivar unidades 
 
 ## 8. Fuente de datos
 
-La fuente principal del proyecto es la **Spotify Web API**, una API REST que entrega metadatos JSON sobre artistas, álbumes y tracks. Todas las llamadas requieren autorización, y en este proyecto se utilizará el flujo **Client Credentials** porque el objetivo se limita a endpoints de catálogo sin datos de usuario. [web:440][web:26]
+La fuente principal del proyecto es la **Spotify Web API**, una API REST que entrega metadatos JSON sobre artistas, álbumes y tracks. Todas las llamadas requieren autorización, y en este proyecto se utilizará el flujo **Client Credentials** porque el objetivo se limita a endpoints de catálogo sin datos de usuario. 
 
 ## 9. Estrategia de extracción inicial
 
@@ -147,7 +147,7 @@ Este proyecto está condicionado por varias restricciones derivadas de la fuente
 
 ### 12.1 Autorización y tipo de acceso
 
-Todas las llamadas a la Spotify Web API requieren autorización. El flujo Client Credentials es servidor-a-servidor y no permite acceder a información privada o personalizada de usuarios. [web:440][web:26]
+Todas las llamadas a la Spotify Web API requieren autorización. El flujo Client Credentials es servidor-a-servidor y no permite acceder a información privada o personalizada de usuarios. 
 
 ### 12.2 Rate limits
 
@@ -155,11 +155,10 @@ Spotify aplica límites de uso en una ventana rodante de 30 segundos y puede res
 
 ### 12.3 Restricciones por modo de desarrollo
 
-Spotify anunció cambios en 2026 para Development Mode, incluyendo límites para nuevos Client IDs y acceso restringido a un conjunto más pequeño de endpoints soportados. Esto obliga a documentar con precisión qué endpoints están disponibles y validar el alcance real del proyecto al momento de implementación. [web:499][web:498]
-
+Spotify anunció cambios en 2026 para Development Mode, incluyendo límites para nuevos Client IDs y acceso restringido a un conjunto más pequeño de endpoints soportados. Esto obliga a documentar con precisión qué endpoints están disponibles y validar el alcance real del proyecto al momento de implementación. 
 ### 12.4 Limitaciones de cobertura
 
-El proyecto depende de cómo Spotify organiza y expone su catálogo y metadatos. No toda clasificación por género es perfecta, no todos los objetos contienen los mismos atributos, y algunos campos pueden estar vacíos, deprecados o ser insuficientes para análisis profundos. [web:503]
+El proyecto depende de cómo Spotify organiza y expone su catálogo y metadatos. No toda clasificación por género es perfecta, no todos los objetos contienen los mismos atributos, y algunos campos pueden estar vacíos, deprecados o ser insuficientes para análisis profundos. 
 
 ## 13. Criterios de calidad de datos
 
