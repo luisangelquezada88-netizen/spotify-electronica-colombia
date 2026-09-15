@@ -4,17 +4,31 @@ settings:
     search_url: https://api.spotify.com/v1/search
     search_types:
       - track
+    # Matriz de búsqueda: término × año. Escala a 200k-500k ampliando esta lista.
+    # Techo por query: limit(50) × max_pages(20) = 1000 (límite offset de Spotify).
+    # 10 términos × 8 años × 1000 = 80k máx/corrida full (únicos reales ~40-60k).
     query_terms:
       - techno
       - house
       - trance
-    limit: 10
-    max_pages: 6
+      - edm
+      - dance
+      - electro
+      - progressive
+      - minimal
+      - tech-house
+      - melodic techno
+    limit: 50
+    max_pages: 20
     sleep_seconds: 1
 
   project:
     start_year: 2017
     end_year: 2024
+    # Refresh diario: solo estos últimos N años (barato). Full semanal: todo.
+    recent_years: 3
+    # 0 = sin filtro. Subir a 20-30 para quedarse con tracks relevantes.
+    min_popularity: 0
 
   mongodb:
     database: spotify_electronica_colombia

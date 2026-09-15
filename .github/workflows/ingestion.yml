@@ -1,0 +1,86 @@
+name: Ingestion pipeline
+
+on:
+  schedule:
+    # Diario 05:00 UTC. El job decide modo: lunes = full, resto = daily.
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Modo de ingesta"
+        required: false
+        default: "daily"
+        type: choice
+        options: [daily, full]
+      min_popularity:
+        description: "Umbral de popularity (0 = sin filtro)"
+        required: false
+        default: "0"
+      limit_queries:
+        description: "Smoke test: nº de queries (vacío = todas)"
+        required: false
+        default: ""
+
+# NOTA cuenta Free + repo privado: `schedule` no dispara en privados.
+# Opciones: repo público (recomendado, es portafolio) o cron-job.org -> workflow_dispatch.
+# Ver docs/automation.md.
+
+jobs:
+  decide:
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.set.outputs.mode }}
+    steps:
+      - id: set
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
+          elif [ "$(date -u +%u)" = "1" ]; then
+            echo "mode=full" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=daily" >> "$GITHUB_OUTPUT"
+          fi
+
+  ingest:
+    needs: decide
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    # Full semanal en 4 shards paralelos; daily en 1 (barato).
+    strategy:
+      matrix:
+        shard: ${{ needs.decide.outputs.mode == 'full' && fromJSON('[0, 1, 2, 3]') || fromJSON('[0]') }}
+      fail-fast: false
+    env:
+      SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+      SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+      MONGO_URI: ${{ secrets.MONGO_URI }}
+      MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+      MIN_POPULARITY: ${{ inputs.min_popularity || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Smoke check (sin DB)
+        run: python -m compileall -q src scripts run_ingestion.py
+
+      - name: Run ingestion (mode=${{ needs.decide.outputs.mode }} shard=${{ matrix.shard }})
+        run: |
+          ARGS="--mode ${{ needs.decide.outputs.mode }} --shard-index ${{ matrix.shard }}"
+          if [ "${{ needs.decide.outputs.mode }}" = "full" ]; then
+            ARGS="$ARGS --num-shards 4"
+          fi
+          if [ -n "${{ inputs.limit_queries }}" ]; then
+            ARGS="$ARGS --limit-queries ${{ inputs.limit_queries }}"
+          fi
+          python run_ingestion.py $ARGS
+
+      - name: Build analysis dataset (solo shard 0)
+        if: matrix.shard == 0
+        run: python scripts/build_analysis.py

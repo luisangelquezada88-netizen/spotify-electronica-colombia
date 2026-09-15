@@ -21,8 +21,9 @@ STOPWORDS = {
 
 
 def get_db():
-    uri = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/')
-    db_name = os.environ.get('MONGODB_DB', 'spotify_electronica_colombia')
+    # Acepta ambos nombres: MONGO_URI (pipeline/.env) y MONGODB_URI (convención hosting).
+    uri = os.environ.get('MONGO_URI') or os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/')
+    db_name = os.environ.get('MONGO_DB_NAME') or os.environ.get('MONGODB_DB', 'spotify_electronica_colombia')
     client = MongoClient(uri)
     return client[db_name]
 

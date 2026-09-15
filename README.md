@@ -1,53 +1,58 @@
 # Spotify Electrónica Colombia
 
-Proyecto end-to-end de ingeniería de datos orientado a portafolio, enfocado en la recolección, almacenamiento, transformación y análisis de metadatos de la Spotify Web API para estudiar música electrónica en Colombia.
+![CI](https://github.com/<owner>/<repo>/actions/workflows/ci.yml/badge.svg)
+![Ingestion](https://github.com/<owner>/<repo>/actions/workflows/ingestion.yml/badge.svg)
 
-## Objetivo
+Pipeline ELT end-to-end (portafolio): Spotify Web API → MongoDB → datasets analíticos → dashboard Streamlit.
+Automatizado con GitHub Actions y desplegable a **costo $0** (Atlas M0 + Streamlit Community Cloud).
 
-Construir un pipeline reproducible con enfoque ELT, usando MongoDB como capa inicial de aterrizaje para datos semiestructurados provenientes de la Spotify Web API. El proyecto busca analizar tendencias, artistas, tracks y señales de popularidad asociadas a música electrónica en Colombia durante el periodo 2018–2025.
+## Arquitectura
 
-## Alcance inicial
+1. Extracción: Spotify Search API (`market=CO`), token cacheado, retry con backoff + `Retry-After`.
+2. Carga: upsert en bulk a `curated_tracks` (índice único `spotify_track_id`), runs en `ingestion_runs`.
+3. Transformación: flatten de track JSON + stats de `popularity` por corrida.
+4. Capa analítica: `scripts/build_analysis.py` → `analysis_tracks`.
+5. Consumo: `src/dashboard_app.py` (Streamlit + Plotly).
 
-- Fuente de datos: Spotify Web API.
-- Mercado inicial: Colombia.
-- Periodo de interés: 2018–2025.
-- Dominio analítico: música electrónica y subgéneros relacionados.
-- Enfoque arquitectónico: ELT con MongoDB como capa principal de almacenamiento inicial.
-- Propósito: construir un proyecto sólido, entendible y publicable en GitHub como portafolio técnico.
+Docs: `docs/architecture.md`, `docs/data-source.md`, `docs/methodology.md`,
+`docs/automation.md`, `docs/deployment.md`, `docs/runbook.md`.
 
-## Arquitectura esperada
+## Quickstart local
 
-1. Extracción desde Spotify Web API.
-2. Carga inicial de respuestas semiestructuradas en MongoDB.
-3. Limpieza y transformación posterior.
-4. Construcción de datasets analíticos.
-5. Análisis exploratorio y visualización.
-6. Dashboard final para comunicar hallazgos.
+```powershell
+cp .env.example .env   # completa SPOTIFY_CLIENT_ID/SECRET y MONGO_URI
+pip install -r requirements.txt
+python run_ingestion.py --mode daily --limit-queries 2
+python scripts/build_analysis.py
+streamlit run src/dashboard_app.py
+```
 
-## Stack previsto
+## CLI ingesta
 
-- Python
-- Spotify Web API
-- MongoDB
-- Pandas
-- Jupyter / VS Code
-- Git y GitHub
+```powershell
+python run_ingestion.py --mode daily                  # refresh años recientes
+python run_ingestion.py --mode full                   # matriz completa
+python run_ingestion.py --mode full --min-popularity 20
+python run_ingestion.py --mode daily --limit-queries 2  # smoke test
+python scripts/backfill_popularity.py --dry-run       # hidratar popularity faltante
+```
 
-## Estructura inicial del repositorio
+## Automatización y despliegue
+
+- Scheduling: GitHub Actions diario 05:00 UTC (lunes = full en 4 shards, resto = daily). Ver `docs/automation.md`.
+- DB: MongoDB Atlas M0 free. Dashboard: Streamlit Community Cloud (URL pública). Ver `docs/deployment.md`.
+- Secretos requeridos: `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `MONGO_URI`, `MONGO_DB_NAME`.
+
+## Estructura
 
 ```text
 spotify-electronica-colombia/
-├── README.md
-├── .gitignore
-├── .env.example
-├── requirements.txt
-├── docs/
-├── src/
-├── notebooks/
-├── config/
-├── data/
-├── tests/
-├── dashboard/
-├── architecture/
-└── metadata/
+├── .github/workflows/      # ingestion.yml (diaria+semanal) + ci.yml
+├── config/settings.yaml    # matriz queries, paginación, min_popularity, recent_years
+├── src/                    # auth, search, ingestion, transform, mongo, dashboard
+├── scripts/                # build_analysis.py, backfill_popularity.py
+├── docs/                   # arquitectura, fuente, metodología, automation, deployment, runbook
+├── tests/diagnostics/      # checks manuales de mongo/conteos/agregaciones
+├── Dockerfile              # paridad local / despliegue contenedor
+└── run_ingestion.py        # entrypoint CLI
 ```

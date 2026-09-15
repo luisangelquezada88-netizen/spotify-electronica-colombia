@@ -25,6 +25,14 @@ def get_project_config() -> dict:
     config_data = load_settings()
     settings = config_data["settings"]
 
+    # MIN_POPULARITY por env permite al workflow/GHA variar el umbral sin editar YAML.
+    min_popularity_env = get_env_variable("MIN_POPULARITY")
+    if min_popularity_env is not None:
+        try:
+            settings = {**settings, "project": {**settings["project"], "min_popularity": int(min_popularity_env)}}
+        except ValueError:
+            pass
+
     return {
         "spotify_client_id": get_env_variable("SPOTIFY_CLIENT_ID"),
         "spotify_client_secret": get_env_variable("SPOTIFY_CLIENT_SECRET"),

@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compile check
+        run: python -m compileall -q src scripts run_ingestion.py
+
+      - name: Import check (sin credenciales ni DB)
+        run: |
+          python -c "import src.auth, src.search, src.ingestion, src.transform, src.mongo, src.config"
+          python -c "from src.ingestion import build_queries; q=build_queries('daily'); assert len(q)>0, 'daily vacío'; print(f'daily queries: {len(q)}')"
+          python -c "from src.ingestion import build_queries; q=build_queries('full'); assert len(q)>0, 'full vacío'; print(f'full queries: {len(q)}')"
+
+      - name: CLI help check
+        run: |
+          python run_ingestion.py --help
+          python scripts/backfill_popularity.py --help

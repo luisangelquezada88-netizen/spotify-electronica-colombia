@@ -1,5 +1,5 @@
-from pymongo import MongoClient
-from pymongo.errors import PyMongoError
+from pymongo import ASCENDING, MongoClient, ReplaceOne
+from pymongo.errors import BulkWriteError, PyMongoError
 
 from src.config import get_project_config
 from src.logger import get_logger
@@ -7,13 +7,29 @@ from src.logger import get_logger
 
 logger = get_logger(__name__)
 
+# Cliente singleton: antes se abría un MongoClient por cada get_collection()
+# (cientos por corrida). Ahora se reutiliza uno por proceso.
+_client: MongoClient | None = None
+
 
 def get_mongo_client() -> MongoClient:
+    global _client
+    if _client is not None:
+        return _client
+
     config = get_project_config()
     mongo_uri = config["mongo_uri"]
 
     logger.info("Conectando a MongoDB")
-    return MongoClient(mongo_uri)
+    _client = MongoClient(mongo_uri)
+    return _client
+
+
+def close_mongo_client() -> None:
+    global _client
+    if _client is not None:
+        _client.close()
+        _client = None
 
 
 def get_database():
@@ -29,6 +45,19 @@ def get_collection(collection_name: str):
     db = get_database()
     logger.info("Accediendo a colección: %s", collection_name)
     return db[collection_name]
+
+
+def ensure_indexes(collection_name: str = "curated_tracks") -> None:
+    """Crea índices idempotentes: único en spotify_track_id + popularity.
+
+    Sin el índice único, re-corridas y shards paralelos generan duplicados.
+    Sin el índice en popularity, el filtro por umbral hace COLLSCAN.
+    """
+    collection = get_collection(collection_name)
+    collection.create_index([("spotify_track_id", ASCENDING)], unique=True)
+    collection.create_index([("popularity", ASCENDING)])
+    collection.create_index([("search_query", ASCENDING)])
+    logger.info("Índices verificados en %s", collection_name)
 
 
 def insert_one_document(collection_name: str, document: dict):
@@ -66,25 +95,46 @@ def upsert_document(collection_name: str, filter_query: dict, document: dict):
     return result
 
 
-def upsert_many_tracks(collection_name: str, documents: list[dict], unique_field: str = "spotify_track_id"):
-    results = []
+def upsert_many_tracks(collection_name: str, documents: list[dict], unique_field: str = "spotify_track_id") -> int:
+    """Upsert en bulk (1 round-trip por lote en vez de N).
 
-    for document in documents:
-        unique_value = document.get(unique_field)
+    A 100 ops/s de Atlas M0, 10k docs en loop 1x1 = ~100 s solo en writes
+    más overhead de conexión; en bulk son segundos. Retorna nº de writes.
+    """
+    valid_docs = [d for d in documents if d.get(unique_field)]
+    skipped = len(documents) - len(valid_docs)
+    if skipped:
+        logger.warning("Documentos omitidos por no tener %s: %s", unique_field, skipped)
+    if not valid_docs:
+        return 0
 
-        if not unique_value:
-            logger.warning("Documento omitido por no tener %s", unique_field)
-            continue
+    collection = get_collection(collection_name)
+    operations = [
+        ReplaceOne({unique_field: doc[unique_field]}, doc, upsert=True)
+        for doc in valid_docs
+    ]
 
-        result = upsert_document(
-            collection_name=collection_name,
-            filter_query={unique_field: unique_value},
-            document=document
+    try:
+        result = collection.bulk_write(operations, ordered=False)
+        total = (result.upserted_count or 0) + (result.modified_count or 0) + (result.matched_count or 0)
+        logger.info(
+            "Bulk upsert en %s: %s ops (insertados=%s modificados=%s)",
+            collection_name, len(valid_docs),
+            result.upserted_count, result.modified_count,
         )
-        results.append(result)
-
-    logger.info("Proceso de upsert completado en %s para %s documentos", collection_name, len(results))
-    return results
+        return total
+    except BulkWriteError as error:
+        # Con ordered=False, parte del lote puede haber aplicado igual.
+        details = error.details or {}
+        n_applied = sum(
+            1 for _ in (details.get("writeErrors") or [])
+        )
+        logger.error(
+            "BulkWriteError en %s: %s errores de %s ops. Detalle: %s",
+            collection_name, len(details.get("writeErrors") or []),
+            len(valid_docs), str(details)[:1000],
+        )
+        return max(0, len(valid_docs) - n_applied)
 
 
 def test_mongo_connection() -> bool:

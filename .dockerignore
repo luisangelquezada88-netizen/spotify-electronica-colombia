@@ -1,12 +1,12 @@
 .venv/
 __pycache__/
 *.pyc
+.git/
 .env
 .vscode/
+logs/
+*.log
 data/raw/
 data/processed/
 metadata/logs/
-logs/
-*.log
-.streamlit/secrets.toml
 .DS_Store
