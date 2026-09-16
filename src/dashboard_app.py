@@ -141,8 +141,10 @@ k6.metric('Colaboraciones', collab_share)
 left, right = st.columns(2)
 with left:
     yearly = df.dropna(subset=['release_year']).groupby('release_year').size().reset_index(name='tracks')
+    yearly['release_year'] = yearly['release_year'].astype(int)
     fig = px.line(yearly, x='release_year', y='tracks', markers=True)
     fig.update_layout(xaxis_title='Año', yaxis_title='Tracks')
+    fig.update_xaxes(tickmode='linear', dtick=1, tickformat='d')
     st.plotly_chart(style_fig(fig), use_container_width=True)
 
 with right:
