@@ -9,9 +9,19 @@
 
 ## 429 Too Many Requests
 
-Esperado a escala. El cliente respeta `Retry-After` y hace backoff (5 reintentos).
-Si ves 429 persistentes: sube `sleep_seconds` en `config/settings.yaml`
-(p. ej. a 2) o baja shards de 4 → 2.
+El cliente respeta `Retry-After` hasta 300 s con backoff. Dos casos:
+
+- **429 normal**: reintenta solo y sigue. Si ves varios seguidos, sube
+  `sleep_seconds` en `config/settings.yaml` (p. ej. a 2).
+- **429 con Retry-After gigante (>300 s, p. ej. 85000 s)**: es baneo de cuota
+  de ~horas, no ventana corta. La corrida aborta sola con
+  `status: quota_exhausted` guardando el progreso parcial (los upserts ya
+  hechos no se pierden). No re-dispates de inmediato: espera al día siguiente
+  (el cron diario lo reintenta solo) o prueba con
+  `--limit-queries 1 --max-pages 2` para sondear.
+
+La paginación para sola cuando una página trae menos items que `limit`
+(no se queman requests en vacío).
 
 ## 401 Unauthorized
 

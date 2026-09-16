@@ -14,19 +14,47 @@ class SpotifySearchError(Exception):
     pass
 
 
-def _sleep_for_retry(attempt: int, response: requests.Response | None) -> None:
-    """Espera Retry-After si Spotify lo envía; si no, backoff exponencial."""
+class SpotifyQuotaExhausted(SpotifySearchError):
+    """429 con Retry-After abusivo (>5 min): la app quedó baneada por horas.
+
+    Dormir el Retry-After completo colgaría el job (hasta 24 h). Se aborta
+    la corrida guardando el progreso parcial en vez de quemar timeout de GHA.
+    """
+
+    def __init__(self, message: str, retry_after: int = 0):
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+# Tope de espera por reintento: más que esto = baneo largo, no ventana corta.
+MAX_RETRY_WAIT_SECONDS = 300
+
+
+def _retry_after_seconds(response: requests.Response | None) -> int | None:
     if response is not None:
-        retry_after = response.headers.get("Retry-After")
-        if retry_after:
+        value = response.headers.get("Retry-After")
+        if value:
             try:
-                delay = max(1, int(retry_after))
-                logger.warning("Rate limit (429). Esperando %s s (Retry-After)", delay)
-                time.sleep(delay)
-                return
+                return max(1, int(value))
             except ValueError:
-                pass
-    delay = min(2 ** attempt, 60)
+                return None
+    return None
+
+
+def _sleep_for_retry(attempt: int, response: requests.Response | None) -> None:
+    """Backoff exponencial topado. Lanza SpotifyQuotaExhausted si el baneo es largo."""
+    retry_after = _retry_after_seconds(response)
+    if retry_after is not None:
+        if retry_after > MAX_RETRY_WAIT_SECONDS:
+            raise SpotifyQuotaExhausted(
+                f"Spotify impuso Retry-After de {retry_after} s: cuota agotada, "
+                "abortando para no colgar el job",
+                retry_after=retry_after,
+            )
+        logger.warning("Rate limit (429). Esperando %s s (Retry-After)", retry_after)
+        time.sleep(retry_after)
+        return
+    delay = min(2 ** attempt, MAX_RETRY_WAIT_SECONDS)
     logger.warning("Reintentando en %s s (intento %s)", delay, attempt + 1)
     time.sleep(delay)
 

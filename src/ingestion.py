@@ -3,7 +3,7 @@ import time
 
 from src.config import get_project_config
 from src.logger import get_logger
-from src.search import search_tracks, SpotifySearchError
+from src.search import search_tracks, SpotifyQuotaExhausted, SpotifySearchError
 from src.transform import transform_search_results
 from src.mongo import (
     close_mongo_client,
@@ -104,6 +104,8 @@ def run_ingestion(
     query_summaries = []
     errors = []
     all_popularities: list = []
+    quota_exhausted = False
+    quota_retry_after: int | None = None
 
     logger.info("Iniciando proceso de ingesta (mode=%s, min_popularity=%s)", mode, min_popularity)
     logger.info("Total de queries a ejecutar: %s", len(queries))
@@ -122,12 +124,20 @@ def run_ingestion(
 
                 try:
                     search_result = search_tracks(query, limit=limit, offset=offset)
+                except SpotifyQuotaExhausted as error:
+                    logger.error("Cuota Spotify agotada (Retry-After %ss): abortando corrida",
+                                 error.retry_after)
+                    errors.append({"query": query, "offset": offset, "error": str(error)})
+                    quota_exhausted = True
+                    quota_retry_after = error.retry_after
+                    break
                 except SpotifySearchError as error:
                     logger.error("Query fallida %s offset=%s: %s", query, offset, error)
                     errors.append({"query": query, "offset": offset, "error": str(error)})
                     continue
 
                 curated_documents = transform_search_results(search_result, query)
+                page_size = len(curated_documents)
                 all_popularities.extend([d.get("popularity") for d in curated_documents])
 
                 if min_popularity > 0:
@@ -154,6 +164,15 @@ def run_ingestion(
                 query_upserts += upserted
                 total_upserts += upserted
 
+                # Parada temprana: página corta = no hay más resultados.
+                # Evita quemar requests (y cuota) paginando en vacío.
+                if page_size < limit:
+                    logger.info(
+                        "Fin de resultados para %s en offset=%s (%s<%s items)",
+                        query, offset, page_size, limit,
+                    )
+                    break
+
                 time.sleep(sleep_seconds)
 
             query_summary = {
@@ -166,6 +185,9 @@ def run_ingestion(
             total_queries += 1
             if query_requests == 0:
                 failed_queries += 1
+            if quota_exhausted:
+                logger.warning("Abortando queries restantes por cuota agotada")
+                break
     finally:
         close_mongo_client()
 
@@ -183,7 +205,11 @@ def run_ingestion(
         popularity_stats["null_count"], popularity_stats["total_sampled"],
     )
 
-    status = "completed" if not errors else "completed_with_errors"
+    status = "completed"
+    if quota_exhausted:
+        status = "quota_exhausted"
+    elif errors:
+        status = "completed_with_errors"
     run_finished_at = datetime.now(UTC).isoformat()
 
     run_document = {
@@ -191,6 +217,8 @@ def run_ingestion(
         "run_finished_at": run_finished_at,
         "mode": mode,
         "min_popularity": min_popularity,
+        "quota_exhausted": quota_exhausted,
+        "quota_retry_after_seconds": quota_retry_after,
         "shard_index": shard_index,
         "num_shards": num_shards,
         "total_queries": total_queries,
