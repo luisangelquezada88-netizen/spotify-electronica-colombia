@@ -5,8 +5,10 @@ settings:
     search_types:
       - track
     # Matriz de búsqueda: término × año. Escala a 200k-500k ampliando esta lista.
-    # Techo por query: limit(50) × max_pages(20) = 1000 (límite offset de Spotify).
-    # 10 términos × 8 años × 1000 = 80k máx/corrida full (únicos reales ~40-60k).
+    # LÍMITE VERIFICADO 2026-09-15: esta app rechaza limit>10 con 400 "Invalid limit"
+    # (probado: 10 OK, 20 FAIL). No subir sin re-probar.
+    # Techo por query: limit(10) × max_pages(50) = 500 (offsets 0-490, bajo el cap 1000).
+    # 10 términos × 8 años × 500 = 40k máx/corrida full (únicos reales ~20-30k).
     query_terms:
       - techno
       - house
@@ -18,8 +20,8 @@ settings:
       - minimal
       - tech-house
       - melodic techno
-    limit: 50
-    max_pages: 20
+    limit: 10
+    max_pages: 50
     sleep_seconds: 1
 
   project:
