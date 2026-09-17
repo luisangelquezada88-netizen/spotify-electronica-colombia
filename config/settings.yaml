@@ -20,6 +20,8 @@ settings:
       - minimal
       - tech-house
       - melodic techno
+      - guaracha
+      - afro house
     limit: 10
     max_pages: 50
     sleep_seconds: 1
