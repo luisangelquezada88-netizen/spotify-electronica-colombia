@@ -30,7 +30,7 @@ flowchart LR
     H -. dispara .-> B
 ```
 
-Flujo detallado en [`architecture/pipeline-flow.mmd`](architecture/pipeline-flow.mmd)
+Flujo detallado en [`architecture/pipeline-flow.md`](architecture/pipeline-flow.md)
 y diagrama general en [`architecture/general-architecture.mmd`](architecture/general-architecture.mmd).
 Decisiones de diseño: [`docs/architecture.md`](docs/architecture.md) ·
 fuente: [`docs/data-source.md`](docs/data-source.md) ·
