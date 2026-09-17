@@ -5,6 +5,8 @@
 
 **Live demo:** https://spotify-electronica-colombia.streamlit.app
 
+*Nota*: Si la app se encuentra dormida por inactividad, presiona `Yes, get this app back up!`
+
 Pipeline ELT end-to-end para recolectar, almacenar, transformar y visualizar
 metadatos de música electrónica asociada al mercado colombiano, usando la
 Spotify Web API como fuente y MongoDB como capa de aterrizaje.
