@@ -26,7 +26,7 @@ settings:
 
   project:
     start_year: 2017
-    end_year: 2024
+    end_year: 2025
     # Refresh diario: solo estos últimos N años (barato). Full semanal: todo.
     recent_years: 3
     # 0 = sin filtro. Subir a 20-30 para quedarse con tracks relevantes.

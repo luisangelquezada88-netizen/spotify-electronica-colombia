@@ -231,3 +231,18 @@ El proyecto debe respetar las políticas, límites y condiciones de uso vigentes
 ## 18. Resumen de la fuente
 
 La Spotify Web API es una fuente adecuada para este proyecto porque ofrece metadatos estructurados del catálogo musical en formato JSON y permite construir un caso realista de ingeniería de datos sobre una fuente semiestructurada. Su uso, sin embargo, exige atención especial a autenticación, paginación, restricciones de cuota, cambios recientes en development mode y limitaciones analíticas de los campos disponibles. 
+
+## 19. Restricciones verificadas con esta app (2026-09)
+
+Probadas empíricamente contra la API, no solo documentadas:
+
+- **Search rechaza `limit > 10`** con `400 Invalid limit` (probado: 10 OK, 20 FAIL).
+  `config/settings.yaml` fija `limit: 10`.
+- **`popularity` llega nulo en el 100% de los resultados de search**
+  (3.736 docs verificados). La clave existe pero el valor es `None`.
+- **`GET /v1/tracks?ids=` responde `403 Forbidden`** con estas credenciales,
+  por lo que el backfill de `popularity` por ID también está bloqueado.
+- **Conclusión:** con el acceso actual no hay forma de obtener `popularity`
+  exacta ni de filtrar por umbral (un filtro `> 80` descartaría el 100% de
+  los docs). La maquinaria de umbral (`min_popularity`) queda lista en el
+  pipeline para cuando se obtenga Extended Quota. Ver `docs/runbook.md`.
