@@ -25,7 +25,7 @@ settings:
     sleep_seconds: 1
 
   project:
-    start_year: 2017
+    start_year: 2018
     end_year: 2025
     # Refresh diario: solo estos últimos N años (barato). Full semanal: todo.
     recent_years: 3
