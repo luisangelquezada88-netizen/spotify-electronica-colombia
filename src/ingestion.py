@@ -67,6 +67,7 @@ def run_ingestion(
     max_pages: int | None = None,
     shard_index: int = 0,
     num_shards: int = 1,
+    shard_delay_seconds: int = 0,
 ) -> dict:
     """Ejecuta la ingesta. Una query fallida no aborta la corrida.
 
@@ -74,6 +75,8 @@ def run_ingestion(
     - limit_queries: smoke test (p. ej. 2 queries).
     - min_popularity: filtra tracks bajo el umbral (default: settings).
     - shard_index/num_shards: reparte queries entre jobs GHA paralelos.
+    - shard_delay_seconds: espera inicial para escalonar shards y no
+      golpear la ventana de 30 s de Spotify con todos a la vez.
     """
     config = get_project_config()
     settings = config["settings"]
@@ -90,6 +93,44 @@ def run_ingestion(
     if limit_queries:
         queries = queries[:limit_queries]
     offsets = build_offsets(limit, effective_max_pages)
+
+    if shard_delay_seconds > 0:
+        logger.info("Shard %s: espera inicial de %s s para escalonar carga",
+                    shard_index, shard_delay_seconds)
+        time.sleep(shard_delay_seconds)
+
+    # Circuit breaker: 1 request de sondeo. Si la cuota sigue quemada del
+    # full anterior, se registra skip y se sale en verde sin quemar cientos
+    # de requests inútiles.
+    if queries:
+        try:
+            search_tracks(queries[0], limit=1, offset=0)
+        except SpotifyQuotaExhausted as error:
+            logger.error("Cuota quemada al sondear: skip de la corrida (Retry-After %ss)",
+                         error.retry_after)
+            skipped_id = insert_one_document("ingestion_runs", {
+                "run_started_at": datetime.now(UTC).isoformat(),
+                "run_finished_at": datetime.now(UTC).isoformat(),
+                "mode": mode,
+                "status": "skipped_quota",
+                "quota_retry_after_seconds": error.retry_after,
+                "source": "spotify_web_api",
+            })
+            close_mongo_client()
+            return {
+                "run_id": str(skipped_id),
+                "status": "skipped_quota",
+                "total_queries": 0,
+                "failed_queries": 0,
+                "total_requests": 1,
+                "total_tracks_transformed": 0,
+                "total_filtered_by_popularity": 0,
+                "total_upserts": 0,
+                "popularity_stats": {"min": None, "max": None, "avg": None,
+                                      "null_count": 0, "total_sampled": 0},
+            }
+        except SpotifySearchError as error:
+            logger.warning("Sondeo fallido (transitorio, se continúa): %s", error)
 
     ensure_indexes("curated_tracks")
 

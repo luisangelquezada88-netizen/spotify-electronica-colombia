@@ -13,6 +13,8 @@ def main() -> None:
     parser.add_argument("--max-pages", type=int, default=None)
     parser.add_argument("--shard-index", type=int, default=0)
     parser.add_argument("--num-shards", type=int, default=1)
+    parser.add_argument("--shard-delay-seconds", type=int, default=0,
+                        help="Espera inicial para escalonar shards")
     args = parser.parse_args()
 
     result = run_ingestion(
@@ -22,6 +24,7 @@ def main() -> None:
         max_pages=args.max_pages,
         shard_index=args.shard_index,
         num_shards=args.num_shards,
+        shard_delay_seconds=args.shard_delay_seconds,
     )
 
     print("Ingesta completada")

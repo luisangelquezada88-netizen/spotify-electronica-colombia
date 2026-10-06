@@ -45,10 +45,11 @@ jobs:
     needs: decide
     runs-on: ubuntu-latest
     timeout-minutes: 360
-    # Full semanal en 4 shards paralelos; daily en 1 (barato).
+    # Full semanal en 2 shards escalonados (ritmo sostenible anti-429);
+    # daily en 1 job con paginación corta (refresco, no re-scrape).
     strategy:
       matrix:
-        shard: ${{ needs.decide.outputs.mode == 'full' && fromJSON('[0, 1, 2, 3]') || fromJSON('[0]') }}
+        shard: ${{ needs.decide.outputs.mode == 'full' && fromJSON('[0, 1]') || fromJSON('[0]') }}
       fail-fast: false
     env:
       SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
@@ -74,7 +75,9 @@ jobs:
         run: |
           ARGS="--mode ${{ needs.decide.outputs.mode }} --shard-index ${{ matrix.shard }}"
           if [ "${{ needs.decide.outputs.mode }}" = "full" ]; then
-            ARGS="$ARGS --num-shards 4"
+            ARGS="$ARGS --num-shards 2 --shard-delay-seconds $(( ${{ matrix.shard }} * 600 ))"
+          else
+            ARGS="$ARGS --max-pages 5"
           fi
           if [ -n "${{ inputs.limit_queries }}" ]; then
             ARGS="$ARGS --limit-queries ${{ inputs.limit_queries }}"

@@ -22,9 +22,29 @@ settings:
       - melodic techno
       - guaracha
       - afro house
+      - hard techno
+      - peak time techno
+      - raw techno
+      - industrial techno
+      - hard groove
+      - dub techno
+      - deep house
+      - latin house
+      - tribal house
+      - funky house
+      - bass house
+      - uplifting trance
+      - psytrance
+      - goa trance
+      - hard trance
+      - drum and bass
+      - dubstep
+      - uk garage
+      - breakbeat
+      - jungle
     limit: 10
     max_pages: 50
-    sleep_seconds: 1
+    sleep_seconds: 2
 
   project:
     start_year: 2018

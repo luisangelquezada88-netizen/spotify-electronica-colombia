@@ -9,8 +9,18 @@ Un solo workflow `.github/workflows/ingestion.yml`:
   - Martes–domingo → `daily` (solo `recent_years` de `config/settings.yaml`, 1 job).
 - **`workflow_dispatch`** para corrida manual con inputs: `mode`, `min_popularity`, `limit_queries`.
 
-Estimación: daily ~10–20 min, full ~2–4 h en 4 shards. Consumo mensual ~300–500 min,
-muy por debajo de los 2.000 min free (privado) o ilimitado (público).
+Estimación: daily ~10 min (~150 requests con `--max-pages 5`), full ~3–4 h
+en 2 shards escalonados (shard 1 arranca 10 min después). Consumo mensual
+~1.000 min, dentro de los 2.000 free (privado) o ilimitado (público).
+
+## Ritmo sostenible anti-429
+
+- Full: 2 shards (no 4) + `sleep_seconds: 2` + arranque escalonado 10 min.
+- Daily: paginación corta (`--max-pages 5`): refresca el top en vez de
+  re-scrapear 50 páginas que el upsert descartaría por duplicadas.
+- Circuit breaker: cada corrida sondea con 1 request; si la cuota sigue
+  quemada registra `skipped_quota` y termina en verde sin quemar cientos
+  de requests (típico el día después de un full con baneo).
 
 ## Aviso cuenta Free + repo privado
 
