@@ -35,6 +35,8 @@ def main() -> None:
     print(f"Tracks transformados: {result['total_tracks_transformed']}")
     print(f"Filtrados por popularidad: {result['total_filtered_by_popularity']}")
     print(f"Upserts ejecutados: {result['total_upserts']}")
+    print(f"  Nuevos (insertados): {result['total_inserted_new']}")
+    print(f"  Ya existentes (emparejados): {result['total_matched_existing']}")
     print(f"Popularity stats: {result['popularity_stats']}")
 
 

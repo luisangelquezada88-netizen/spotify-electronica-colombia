@@ -126,6 +126,8 @@ def run_ingestion(
                 "total_tracks_transformed": 0,
                 "total_filtered_by_popularity": 0,
                 "total_upserts": 0,
+                "total_inserted_new": 0,
+                "total_matched_existing": 0,
                 "popularity_stats": {"min": None, "max": None, "avg": None,
                                       "null_count": 0, "total_sampled": 0},
             }
@@ -141,6 +143,8 @@ def run_ingestion(
     total_tracks_transformed = 0
     total_filtered_by_popularity = 0
     total_upserts = 0
+    total_inserted = 0
+    total_matched = 0
     failed_queries = 0
     query_summaries = []
     errors = []
@@ -158,6 +162,8 @@ def run_ingestion(
 
             query_tracks_transformed = 0
             query_upserts = 0
+            query_inserted = 0
+            query_matched = 0
             query_requests = 0
 
             for offset in offsets:
@@ -191,7 +197,7 @@ def run_ingestion(
                     total_filtered_by_popularity += before - len(curated_documents)
 
                 try:
-                    upserted = upsert_many_tracks("curated_tracks", curated_documents)
+                    outcome = upsert_many_tracks("curated_tracks", curated_documents)
                 except Exception as error:
                     logger.error("Upsert fallido %s offset=%s: %s", query, offset, error)
                     errors.append({"query": query, "offset": offset, "error": f"upsert: {error}"})
@@ -202,8 +208,12 @@ def run_ingestion(
 
                 query_tracks_transformed += len(curated_documents)
                 total_tracks_transformed += len(curated_documents)
-                query_upserts += upserted
-                total_upserts += upserted
+                query_upserts += outcome["inserted"] + outcome["matched"] + outcome["modified"]
+                query_inserted += outcome["inserted"]
+                query_matched += outcome["matched"] + outcome["modified"]
+                total_upserts += outcome["inserted"] + outcome["matched"] + outcome["modified"]
+                total_inserted += outcome["inserted"]
+                total_matched += outcome["matched"] + outcome["modified"]
 
                 # Parada temprana: página corta = no hay más resultados.
                 # Evita quemar requests (y cuota) paginando en vacío.
@@ -221,6 +231,8 @@ def run_ingestion(
                 "requests_executed": query_requests,
                 "tracks_found": query_tracks_transformed,
                 "upserts_executed": query_upserts,
+                "inserted_new": query_inserted,
+                "matched_existing": query_matched,
             }
             query_summaries.append(query_summary)
             total_queries += 1
@@ -268,6 +280,8 @@ def run_ingestion(
         "total_tracks_transformed": total_tracks_transformed,
         "total_filtered_by_popularity": total_filtered_by_popularity,
         "total_upserts": total_upserts,
+        "total_inserted_new": total_inserted,
+        "total_matched_existing": total_matched,
         "popularity_stats": popularity_stats,
         "query_summaries": query_summaries,
         "errors": errors[:50],
@@ -290,5 +304,7 @@ def run_ingestion(
         "total_tracks_transformed": total_tracks_transformed,
         "total_filtered_by_popularity": total_filtered_by_popularity,
         "total_upserts": total_upserts,
+        "total_inserted_new": total_inserted,
+        "total_matched_existing": total_matched,
         "popularity_stats": popularity_stats,
     }

@@ -95,18 +95,20 @@ def upsert_document(collection_name: str, filter_query: dict, document: dict):
     return result
 
 
-def upsert_many_tracks(collection_name: str, documents: list[dict], unique_field: str = "spotify_track_id") -> int:
+def upsert_many_tracks(collection_name: str, documents: list[dict], unique_field: str = "spotify_track_id") -> dict:
     """Upsert en bulk (1 round-trip por lote en vez de N).
 
     A 100 ops/s de Atlas M0, 10k docs en loop 1x1 = ~100 s solo en writes
-    más overhead de conexión; en bulk son segundos. Retorna nº de writes.
+    más overhead de conexión; en bulk son segundos.
+    Retorna dict separado: insertados (docs NUEVOS = crecimiento real) vs
+    emparejados/modificados (ya existían = dedup).
     """
     valid_docs = [d for d in documents if d.get(unique_field)]
     skipped = len(documents) - len(valid_docs)
     if skipped:
         logger.warning("Documentos omitidos por no tener %s: %s", unique_field, skipped)
     if not valid_docs:
-        return 0
+        return {"inserted": 0, "matched": 0, "modified": 0}
 
     collection = get_collection(collection_name)
     operations = [
@@ -116,25 +118,25 @@ def upsert_many_tracks(collection_name: str, documents: list[dict], unique_field
 
     try:
         result = collection.bulk_write(operations, ordered=False)
-        total = (result.upserted_count or 0) + (result.modified_count or 0) + (result.matched_count or 0)
+        outcome = {
+            "inserted": result.upserted_count or 0,
+            "matched": result.matched_count or 0,
+            "modified": result.modified_count or 0,
+        }
         logger.info(
-            "Bulk upsert en %s: %s ops (insertados=%s modificados=%s)",
+            "Bulk upsert en %s: %s ops (nuevos=%s emparejados=%s modificados=%s)",
             collection_name, len(valid_docs),
-            result.upserted_count, result.modified_count,
+            outcome["inserted"], outcome["matched"], outcome["modified"],
         )
-        return total
+        return outcome
     except BulkWriteError as error:
-        # Con ordered=False, parte del lote puede haber aplicado igual.
         details = error.details or {}
-        n_applied = sum(
-            1 for _ in (details.get("writeErrors") or [])
-        )
+        n_errors = len(details.get("writeErrors") or [])
         logger.error(
             "BulkWriteError en %s: %s errores de %s ops. Detalle: %s",
-            collection_name, len(details.get("writeErrors") or []),
-            len(valid_docs), str(details)[:1000],
+            collection_name, n_errors, len(valid_docs), str(details)[:1000],
         )
-        return max(0, len(valid_docs) - n_applied)
+        return {"inserted": 0, "matched": 0, "modified": 0}
 
 
 def test_mongo_connection() -> bool:
